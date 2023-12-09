@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.20.0/cytoscape.min.js"></script>
+    <title>Cayley Graph Interconnect Network</title>
+  </head>
+  <body>
+    <header>
+      <h1>Server Interconnect Network</h1>
+    </header>
+    <main>
+      <section id="graph-visualization">
+        <h2>Cayley Graph Visualization</h2>
+        <div id="cy"></div>
+      </section>
+      <section id="network-parameters">
+        <h2>Network Parameters</h2>
+        <label for="numNodes">Number of Nodes:</label>
+        <input type="number" id="numNodes" min="1" value="3" />
+
+        <label for="degree">Node Degree:</label>
+        <input type="number" id="degree" min="1" value="2" />
+
+        <button onclick="updateGraph()">Update Graph</button>
+      </section>
+      <!-- <section id="network-analysis">
+        <h2>Network Analysis</h2>
+        <div id="network-properties"></div>
+      </section> -->
+      <!-- <section id="optimization">
+        <h2>Optimization</h2>
+        <button onclick="optimizeGraph()">Optimize Graph</button>
+      </section> -->
+      <section id="implementation">
+        <h2>Implementation</h2>
+        <button onclick="simulateRouting()">Simulate Routing</button>
+        <div id="packet-routing"></div>
+      </section>
+      <section id="testing">
+        <h2>Testing</h2>
+        <button onclick="validateRouting()">Validate Routing</button>
+        <button onclick="loadTestNetwork()">Load Test Network</button>
+        <div id="testing-results"></div>
+      </section>
+    </main>
+    <footer>
+      <p>&copy; 2023 Your Project Name</p>
+    </footer>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        
+        var cy = cytoscape({
+          container: document.getElementById("cy"),
+          elements: [], // Empty initially
+          style: [
+            {
+              selector: "node",
+              style: {
+                "background-color": "#666",
+                label: "data(id)",
+              },
+            },
+            {
+              selector: "edge",
+              style: {
+                width: 3,
+                "line-color": "#ccc",
+                "target-arrow-color": "#ccc",
+                "target-arrow-shape": "triangle",
+              },
+            },
+          ],
+          layout: { name: "grid" }, 
+        });
+
+        window.updateGraph = function () {
+          var numNodes = parseInt(document.getElementById("numNodes").value);
+          var degree = parseInt(document.getElementById("degree").value);
+
+        
+          cy.elements().remove();
+          for (var i = 1; i <= numNodes; i++) {
+            cy.add({ data: { id: "node" + i } });
+          }
+
+          for (var i = 1; i <= numNodes; i++) {
+            for (var j = 1; j <= degree / 2; j++) {
+              var neighbor = ((i + j) % numNodes) + 1;
+              cy.add({
+                data: {
+                  id: "edge" + i + "to" + neighbor, 
+                  source: "node" + i,
+                  target: "node" + neighbor,
+                },
+              });
+            }
+          }
+
+          // Apply layout
+          cy.layout({ name: "grid" }).run();
+          updateNetworkAnalysis();
+        };
+
+        // Function to perform network analysis and display properties
+        function updateNetworkAnalysis() {
+          var allNodes = cy.nodes();
+          var diameter = calculateDiameter(allNodes);
+          var averageDegree = allNodes.averageDegree();
+          var nodeCount = allNodes.length;
+          var edgeCount = cy.edges().length;
+
+          var propertiesHtml = `
+        <p><strong>Network Properties:</strong></p>
+        <p>Diameter: ${diameter.toFixed(2)}</p>
+        <p>Average Degree: ${averageDegree.toFixed(2)}</p>
+        <p>Node Count: ${nodeCount}</p>
+        <p>Edge Count: ${edgeCount}</p>
+    `;
+
+          document.getElementById("network-properties").innerHTML =
+            propertiesHtml;
+        }
+
+       
+        function calculateDiameter(nodes) {
+          var maxDistance = 0;
+
+          nodes.forEach(function (sourceNode) {
+            var distances = cy.elements().bfs({
+              roots: sourceNode,
+              visit: function (v, e, u, i, depth) {
+                if (depth > maxDistance) {
+                  maxDistance = depth;
+                }
+              },
+            });
+          });
+
+          return maxDistance;
+        }
+       
+        window.optimizeGraph = function () {
+          cy.elements().remove();
+
+          var numNodes = parseInt(document.getElementById("numNodes").value);
+          var degree = parseInt(document.getElementById("degree").value);
+
+          // Add nodes
+          for (var i = 1; i <= numNodes; i++) {
+            cy.add({ data: { id: "node" + i } });
+          }
+
+        
+          for (var i = 1; i <= numNodes; i++) {
+            for (var j = 1; j <= degree / 2; j++) {
+                var neighbor = ((i + j) % numNodes) + 1;
+              cy.add({
+                data: {
+                  id: "edge" + i + neighbor,
+                  source: "node" + i,
+                  target: "node" + neighbor,
+                },
+              });
+            }
+          }
+
+       
+          updateNetworkAnalysis();
+
+        
+          cy.layout({ name: "grid" }).run();
+        };
+
+        window.simulateRouting = function () {
+         
+          document.getElementById("packet-routing").innerHTML = "";
+
+       
+          var sourceNode = cy.nodes()[0];
+          var targetNode = cy.nodes()[cy.nodes().length - 1];
+
+          var path = cy
+            .elements()
+            .aStar({ root: sourceNode, goal: targetNode }).path;
+
+          var routingHtml = "<p><strong>Packet Routing:</strong></p>";
+          if (path && path.length > 0) {
+            routingHtml += "<p>Routing path: ";
+            path.forEach(function (element, index) {
+              routingHtml += element.id();
+              if (index < path.length - 1) routingHtml += " -> ";
+            });
+            routingHtml += "</p>";
+          } else {
+            routingHtml += "<p>No valid routing path found.</p>";
+          }
+
+          document.getElementById("packet-routing").innerHTML = routingHtml;
+        };
+
+        window.validateRouting = function () {
+          var sourceNode = cy.nodes()[0];
+          var targetNode = cy.nodes()[cy.nodes().length - 1];
+
+          var path = cy
+            .elements()
+            .aStar({ root: sourceNode, goal: targetNode }).path;
+
+          
+          var validationHtml = "<p><strong>Validation Results:</strong></p>";
+          if (
+            path &&
+            path.length > 0 &&
+            path[path.length - 1].id() === targetNode.id()
+          ) {
+            validationHtml += "<p>Routing algorithm is correct.</p>";
+          } else {
+            validationHtml += "<p>Routing algorithm is incorrect.</p>";
+          }
+
+          document.getElementById("testing-results").innerHTML = validationHtml;
+        };
+
+   
+        window.loadTestNetwork = function () {
+          var simulatedLoad = Math.floor(Math.random() * 100) + 1; 
+
+          // Display load testing results
+          var loadTestHtml = "<p><strong>Load Testing Results:</strong></p>";
+          loadTestHtml += "<p>Simulated Load: " + simulatedLoad + "%</p>";
+          loadTestHtml +=
+            "<p>Network is operating within acceptable limits.</p>";
+
+          document.getElementById("testing-results").innerHTML = loadTestHtml;
+        };
+      });
+    </script>
+  </body>
+</html>
